@@ -1,0 +1,41 @@
+name: Playit Terminal Server
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-terminal-server:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v2
+
+    - name: Update and Install Required Packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xrdp xfce4 xfce4-goodies
+        sudo systemctl enable xrdp
+        sudo systemctl start xrdp
+
+    - name: Configure XRDP
+      run: |
+        echo xfce4-session >~/.xsession
+        sudo sed -i.bak '/^port=/s/3389/3390/' /etc/xrdp/xrdp.ini
+        sudo systemctl restart xrdp
+
+    - name: Install Playit Agent
+      run: |
+        wget https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-linux
+        chmod +x playit-linux
+        sudo mv playit-linux /usr/local/bin/playit
+
+    - name: Start Playit and Set Up Terminal Server Tunnel
+      env:
+        PLAYIT_AUTH_KEY: ${{ secrets.PL }}
+      run: |
+        nohup playit --secret $PLAYIT_AUTH_KEY &
+
+    - name: Keep the GitHub Action Runner Alive
+      run: |
+        sleep 11800  # Adjust the duration based on your needs
